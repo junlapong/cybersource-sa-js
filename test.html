@@ -1,0 +1,100 @@
+<html>
+
+<head>
+  <link rel="stylesheet" type="text/css" href="payment.css" />
+  <!-- Add Crypto-JS and Jquery -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/crypto-js.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/hmac-sha256.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.9-1/enc-base64.min.js"></script>
+	<script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+	<script type="text/javascript" src="payment_form.js"></script>
+</head>
+
+<body>
+	<!-- https://testsecureacceptance.cybersource.com/pay,   ./debug.php -->
+  <form id="payment_form" action="https://testsecureacceptance.cybersource.com/pay" method="post">
+    <input type="hidden" id="access_key" value="1ebbb0258eca36ccae4a3cdd47220f3e">
+    <input type="hidden" id="profile_id" value="0B2BB457-465C-47EA-8C5E-55C673C119BD">
+    <input type="hidden" id="signed_field_names" value="access_key,profile_id,transaction_uuid,signed_field_names,unsigned_field_names,signed_date_time,locale,transaction_type,reference_number,amount,currency,payment_method,bill_to_forename,bill_to_surname,bill_to_email,bill_to_phone,bill_to_address_line1,bill_to_address_city,bill_to_address_state,bill_to_address_country,bill_to_address_postal_code">
+    <input type="hidden" id="unsigned_field_names">
+    <input type="hidden" id="signed_date_time" value="">
+    <input type="hidden" id="transaction_uuid" value="">
+	<input type="hidden" id="locale" value="en">
+    <fieldset>
+      <legend>Payment Details</legend>
+      <div id="paymentDetailsSection" class="section">
+        <span>transaction_type:</span><select name="transaction_type" id="transaction_type">
+        <option value="authorization">authorization</option>
+        <option value="sale">sale</option>
+        <option value="create_payment_token">create_payment_token</option>
+        <option value="authorization,create_payment_token">authorization,create_payment_token</option>
+      </select><br/>
+        <span>reference_number:</span><input type="text" id="reference_number" size="25"><br/>
+        <span>amount:</span><input type="text" id="amount" size="25"><br/>
+        <span>currency:</span><input type="text" id="currency" size="25"><br/>
+        <span>payment_method:</span><input type="text" id="payment_method"><br/>
+        <span>bill_to_forename:</span><input type="text" id="bill_to_forename"><br/>
+        <span>bill_to_surname:</span><input type="text" id="bill_to_surname"><br/>
+        <span>bill_to_email:</span><input type="text" id="bill_to_email"><br/>
+        <span>bill_to_phone:</span><input type="text" id="bill_to_phone"><br/>
+        <span>bill_to_address_line1:</span><input type="text" id="bill_to_address_line1"><br/>
+        <span>bill_to_address_city:</span><input type="text" id="bill_to_address_city"><br/>
+        <span>bill_to_address_state:</span><input type="text" id="bill_to_address_state"><br/>
+        <span>bill_to_address_country:</span><input type="text" id="bill_to_address_country"><br/>
+        <span>bill_to_address_postal_code:</span><input type="text" id="bill_to_address_postal_code"><br/>
+      </div>
+    </fieldset>
+    <input type="submit" id="submit" value="Submit"/>
+  </form>
+
+  <script>
+    //Return UTC date (current time) as string formatted for Cybs.
+    var dateString = function () {
+      var d = new Date();
+      d = d.toISOString();
+      return d.substring(0, 19) + 'Z';
+    };
+
+    $(document).ready(function () {
+
+      //Submit button event handler
+      $('#payment_form').submit(function (event) {
+        //event.preventDefault(); //Debug
+
+        //add 'name' attr to all input items
+        $('input').each(function (item) {
+          $(this).attr('name', $(this).attr('id'));
+        });
+
+
+        //insert current time
+        $("#signed_date_time").val(dateString());
+
+        //generate unique transaction id
+        $("#transaction_uuid").val(Math.floor(Math.random() * 100000000));
+        //console.log($("#signed_date_time").val());
+    
+        //create data to sign
+        var signedFieldNames = $('#signed_field_names').val().split(",");
+        var dataToSign = [];
+        signedFieldNames.forEach(function (item) {
+          dataToSign.push(item + "=" + $('#' + item).val());
+        });
+        dataToSign = dataToSign.join(",");
+        //console.log(dataToSign);
+
+        var secretKey = '6c311ff2776e45be8686c8ac6bfb886a1d41516a0a9e4ab99a822186499d372c7378c8ded76e4e39bacda489fa770fccedf6ea264e6b4ceeb7b217cb7508a6f24a6a9a4d56f54fd0a0b1f993c36734a4e5a1d83de9a843519405247e3bb58ede027a83a827454088a0dde7c66611449d1bf2cea55cfe4033b83fd122ea1526fe';
+        var signature = $('<input/>').attr('id', 'signature').attr('type', 'hidden').attr('name', 'signature');
+        signature.val(CryptoJS.HmacSHA256(dataToSign, secretKey).toString(CryptoJS.enc.Base64));
+
+        //prepend the signature field to the form 
+        $('#payment_form').prepend(signature);
+
+        //Post to CyberSource
+      });
+    });
+  </script>
+
+</body>
+
+</html>
